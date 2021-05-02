@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gepetto-pool
+  namespace: gepetto
+spec:
+  selector:
+    matchLabels:
+      app: gepetto-pool
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: gepetto-pool
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+      containers:
+      - name: chrome
+        image: zenika/alpine-chrome:89
+        args:
+          - --remote-debugging-address=0.0.0.0
+          - --remote-debugging-port=9222
+          - --disable-gpu
+          - --headless
+        securityContext:
+          seccompProfile:
+            type: Localhost
+            localhostProfile: profiles/chrome.json
+          allowPrivilegeEscalation: false
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "1"
+          requests:
+            memory: "100Mi"
+            cpu: "1"
+        ports:
+          - containerPort: 9222
+            name: devtools
+        livenessProbe:
+          httpGet:
+            path: /json
+            port: 9222
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /json
+            port: 9222
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+        volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+          - mountPath: /home/chrome
+            name: chrome
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: chrome
+          emptyDir: {}
